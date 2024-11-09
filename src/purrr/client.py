@@ -13,8 +13,7 @@ from prefect.client.schemas.filters import (
 )
 from prefect.client.schemas.responses import DeploymentResponse
 from prefect.client.schemas.sorting import FlowRunSort
-from prefect.client.schemas import FlowRun, StateType as FlowRunStates
-from prefect.client.schemas.objects import TERMINAL_STATES
+from prefect.client.schemas.objects import TERMINAL_STATES, Log, FlowRun, StateType as FlowRunStates
 from prefect.exceptions import ObjectNotFound
 
 class CachedPrefectClient:
@@ -30,23 +29,39 @@ class CachedPrefectClient:
         sort: FlowRunSort = FlowRunSort.START_TIME_DESC,
         state_types: list[FlowRunStates] | None = None,
     ) -> list[FlowRun]:
+        """Get all flow runs, optionally filtered by state types.
+        
+        Args:
+            sort: How to sort the flow runs
+            state_types: Optional list of state types to filter by
+            
+        Returns:
+            List of flow runs
+        """
         if state_types:
             flow_run_filter = FlowRunFilter(
                 state=FlowRunFilterState(type=FlowRunFilterStateType(any_=state_types))
             )
         else:
             flow_run_filter = None
+            
+        all_flow_runs = []
         offset = 0
+        
         while True:
             flow_runs = await self.client.read_flow_runs(
                 sort=sort, offset=offset, flow_run_filter=flow_run_filter
             )
-            offset += 25
             if not flow_runs:
                 break
+                
             for flow_run in flow_runs:
                 self.db.upsert_flow_run(flow_run)
-            return flow_runs
+                
+            all_flow_runs.extend(flow_runs)
+            offset += len(flow_runs)
+            
+        return all_flow_runs
         
     async def get_run_by_id(self, run_id: UUID | str, force_refresh: bool = False) -> FlowRun | None:
         """Get a flow run by ID, optionally forcing a refresh from the remote server.
@@ -103,6 +118,7 @@ class LocalDuckDB:
     def __init__(self, db_path: str = ":memory:"):
         self.db = duckdb.connect(database=db_path)
         self.create_flow_runs_table()
+        self.create_logs_table()
 
     def upsert_data(self, table: str, data: dict):
         # Create table if not exists with dynamic columns based on data
@@ -182,4 +198,67 @@ class LocalDuckDB:
         if result:
             return FlowRun(**json.loads(result[0][0]))
         return None
+
+    def create_logs_table(self):
+        """Create the logs table if it doesn't exist."""
+        self.db.execute("""
+            CREATE TABLE IF NOT EXISTS logs (
+                name VARCHAR,
+                level INTEGER,
+                message VARCHAR,
+                timestamp TIMESTAMP,
+                flow_run_id VARCHAR,  -- Store UUID as string
+                task_run_id VARCHAR,  -- Store UUID as string
+                PRIMARY KEY (flow_run_id, timestamp)  -- Composite key to allow multiple logs per flow
+            )
+        """)
+
+    def upsert_log(self, log: Log):
+        """
+        Upsert a log entry into the database.
+        
+        Args:
+            log: A Prefect Log object
+        """
+        self.db.execute("""
+            INSERT OR REPLACE INTO logs 
+            (name, level, message, timestamp, flow_run_id, task_run_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, [
+            log.name,
+            log.level,
+            log.message,
+            log.timestamp,
+            str(log.flow_run_id) if log.flow_run_id else None,
+            str(log.task_run_id) if log.task_run_id else None
+        ])
+
+    def upsert_logs(self, logs: list[Log]):
+        """
+        Upsert multiple log entries into the database.
+        
+        Args:
+            logs: A list of Prefect Log objects
+        """
+        for log in logs:
+            self.upsert_log(log)
+
+    def get_logs_for_flow_run(self, flow_run_id: UUID | str) -> list[dict]:
+        """
+        Get all logs for a specific flow run.
+        
+        Args:
+            flow_run_id: The ID of the flow run
+            
+        Returns:
+            List of log entries as dictionaries
+        """
+        result = self.db.execute(
+            "SELECT * FROM logs WHERE flow_run_id = ? ORDER BY timestamp",
+            [str(flow_run_id)]
+        ).fetchall()
+        
+        # Convert to list of dicts with column names
+        columns = ['name', 'level', 'message', 'timestamp', 'flow_run_id', 'task_run_id']
+        return [dict(zip(columns, row)) for row in result]
     
