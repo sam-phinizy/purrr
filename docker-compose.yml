@@ -1,0 +1,21 @@
+services:
+  prefect-server:
+    image: prefecthq/prefect:3.0.10-python3.12
+    command: ["prefect", "server", "start","--host", "0.0.0.0"]
+    healthcheck:
+      test: sleep 10
+      interval: 1s
+      timeout: 11s
+      retries: 0
+    ports:
+      - "4200:4200"
+  prefect-worker:
+    image: prefecthq/prefect:3.0.10-python3.12
+    command: ["prefect", "worker", "start", "--pool", "test-process-pool"]
+    depends_on:
+      prefect-server:
+        condition: service_healthy
+    volumes:
+      - ./tests/fixtures/flows:/home/tests/fixtures/flows
+    environment:
+      - PREFECT_API_URL=http://prefect-server:4200/api

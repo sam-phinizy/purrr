@@ -1,0 +1,11 @@
+#flowDetails {
+    width: 25%;
+}
+
+#flowLog {
+    width: 75%;
+}
+
+.formLabel {
+    text-style: bold;
+}
