@@ -2,20 +2,31 @@ services:
   prefect-server:
     image: prefecthq/prefect:3.0.10-python3.12
     command: ["prefect", "server", "start","--host", "0.0.0.0"]
+    depends_on:
+      - postgres
     healthcheck:
       test: sleep 10
       interval: 1s
       timeout: 11s
-      retries: 0
+      retries: 0 
     ports:
       - "4200:4200"
+    environment:
+      - PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://postgres:yourTopSecretPassword@postgres:5432/prefect
   prefect-worker:
     image: prefecthq/prefect:3.0.10-python3.12
     command: ["prefect", "worker", "start", "--pool", "test-process-pool"]
     depends_on:
       prefect-server:
         condition: service_healthy
-    volumes:
-      - ./tests/fixtures/flows:/home/tests/fixtures/flows
     environment:
       - PREFECT_API_URL=http://prefect-server:4200/api
+  postgres:
+        container_name: prefect-postgres
+        ports:
+            - 5432:5432
+        environment:
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=yourTopSecretPassword
+            - POSTGRES_DB=prefect
+        image: postgres:latest
