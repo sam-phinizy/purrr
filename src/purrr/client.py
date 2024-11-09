@@ -14,15 +14,17 @@ from prefect.client.schemas.filters import (
 from prefect.client.schemas.responses import DeploymentResponse
 from prefect.client.schemas.sorting import FlowRunSort
 from prefect.client.schemas import FlowRun, StateType as FlowRunStates
+from prefect.client.schemas.objects import TERMINAL_STATES
 from prefect.exceptions import ObjectNotFound
 
 class CachedPrefectClient:
     def __init__(self):
         self.client = get_client()
+        self.db = LocalDuckDB("test.db")
 
     def reset(self):
         self.client = PrefectClient()
-
+    
     async def get_runs(
         self,
         sort: FlowRunSort = FlowRunSort.START_TIME_DESC,
@@ -42,8 +44,43 @@ class CachedPrefectClient:
             offset += 25
             if not flow_runs:
                 break
-
+            for flow_run in flow_runs:
+                self.db.upsert_flow_run(flow_run)
             return flow_runs
+        
+    async def get_run_by_id(self, run_id: UUID | str, force_refresh: bool = False) -> FlowRun | None:
+        """Get a flow run by ID, optionally forcing a refresh from the remote server.
+        
+        Args:
+            run_id: The ID of the flow run to retrieve
+            force_refresh: If True, skip cache and fetch from server. Defaults to False.
+            
+        Returns:
+            The flow run if found, None if not found
+        """
+        try:
+            # If force refresh requested, bypass cache and fetch from server
+            if force_refresh:
+                flow_run = await self._fetch_and_cache_flow_run(run_id)
+                return flow_run
+
+            # Try to get from cache first
+            cached_run = self.db.get_flow_run(run_id)
+            if cached_run and cached_run.state_name in TERMINAL_STATES:
+                return cached_run
+
+            # Cache miss or non-terminal state, fetch from server
+            flow_run = await self._fetch_and_cache_flow_run(run_id)
+            return flow_run
+
+        except ObjectNotFound:
+            return None
+
+    async def _fetch_and_cache_flow_run(self, run_id: UUID | str) -> FlowRun:
+        """Helper to fetch a flow run from server and cache it."""
+        flow_run = await self.client.read_flow_run(run_id)
+        self.db.upsert_flow_run(flow_run)
+        return flow_run
 
     async def get_run_logs(self, run_id: UUID | str) -> str:
         log_filter = LogFilter(flow_run_id=LogFilterFlowRunId(any_=[run_id]))
@@ -140,4 +177,9 @@ class LocalDuckDB:
             )
         """)
 
+    def get_flow_run(self, run_id: UUID | str) -> FlowRun | None:
+        result = self.db.execute(f"SELECT * FROM flow_runs WHERE id = '{run_id}'").fetchall()
+        if result:
+            return FlowRun(**json.loads(result[0][0]))
+        return None
     
