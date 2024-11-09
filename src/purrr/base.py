@@ -1,11 +1,12 @@
-from typing import Type
+from typing import Type, TYPE_CHECKING
 
-from duckdb.duckdb import table
-from textual import on
 from textual.app import ComposeResult
 from textual.screen import Screen
-from textual.widgets import Header, DataTable, Footer, Label
-from textual.widgets._data_table import CellType
+from textual.widgets import Header, DataTable, Footer
+
+
+if TYPE_CHECKING:
+    from purrr.tui import PrefectApp
 
 
 class BaseDetailView(Screen):
@@ -28,6 +29,7 @@ class BaseDetailView(Screen):
 
 class BaseTableScreen(Screen):
     detail_screen: Type[BaseDetailView]
+    app: "PrefectApp"
 
     BINDINGS = [
         ("R", "refresh_data()", "Refresh"),
@@ -62,7 +64,6 @@ class BaseTableScreen(Screen):
         await self.load_data(table)
 
     async def action_sort_by_column(self):
-        self.app.log("sorting!")
         my_table = self.query_one(DataTable)
         _, col_key = my_table.coordinate_to_cell_key(my_table.cursor_coordinate)
 

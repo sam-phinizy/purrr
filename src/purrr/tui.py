@@ -33,6 +33,7 @@ class PrefectApp(App):
     }
 
     CSS_PATH = "purrr.tcss"
+    _client: CachedPrefectClient
 
     def __init__(self, client=None) -> None:
         super().__init__()
