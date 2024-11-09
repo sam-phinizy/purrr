@@ -6,6 +6,7 @@ from purrr.client import CachedPrefectClient
 from purrr.deployments import DeploymentsScreen
 from purrr.flows import FlowsScreen
 from purrr.runs import RunsScreen
+from purrr.settings import settings
 
 
 class Screens(str, enum.Enum):
@@ -38,7 +39,6 @@ class PrefectApp(App):
         self._client = client or CachedPrefectClient()
 
     def on_mount(self) -> None:
-        self.client = CachedPrefectClient()
         self.push_screen(Screens.RUNS)
 
     def switch_workspace(self) -> None:
