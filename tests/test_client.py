@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime
 import uuid
-from prefect.client.schemas import FlowRun, State, StateType
+from prefect.client.schemas.objects import FlowRun, Log, State, StateType
 from purrr.client import LocalDuckDB
 
 @pytest.fixture
@@ -40,7 +40,6 @@ def sample_flow_runs():
     ]
 
 def test_create_flow_runs_table(db):
-    # Verify table exists and has correct schema
     result = db.db.execute("""
         SELECT column_name, data_type 
         FROM information_schema.columns 
@@ -64,29 +63,29 @@ def test_create_flow_runs_table(db):
 
 def test_upsert_flow_run(db, sample_flow_run):
     # Insert a flow run
-    db.upsert_flow_run(sample_flow_run)
-    
+    db.runs.upsert(sample_flow_run)
+
     # Verify the flow run was inserted
     result = db.db.execute("SELECT * FROM flow_runs").fetchone()
     assert result is not None
-    assert result[1] == str(sample_flow_run.id)  # id is at index 1
-    assert result[2] == sample_flow_run.name     # name is at index 2
-    
+    assert result[1] == str(sample_flow_run.id)
+    assert result[2] == sample_flow_run.name
+
     # Test upsert (update) with same ID
     updated_flow_run = sample_flow_run.model_copy()
     updated_flow_run.name = "updated-name"
-    db.upsert_flow_run(updated_flow_run)
-    
+    db.runs.upsert(updated_flow_run)
+
     # Verify there's still only one record but with updated name
     result = db.db.execute("SELECT COUNT(*), name FROM flow_runs GROUP BY name").fetchall()
     assert len(result) == 1
-    assert result[0][0] == 1  # count
+    assert result[0][0] == 1
     assert result[0][1] == "updated-name"
 
 def test_upsert_flow_runs(db, sample_flow_runs):
     # Insert multiple flow runs
-    db.upsert_flow_runs(sample_flow_runs)
-    
+    db.runs.upsert_many(sample_flow_runs)
+
     # Verify all flow runs were inserted
     result = db.db.execute("SELECT COUNT(*) FROM flow_runs").fetchone()
     assert result[0] == len(sample_flow_runs)
@@ -98,30 +97,61 @@ def test_upsert_flow_runs(db, sample_flow_runs):
             [str(flow_run.id)]
         ).fetchone()
         assert result is not None
-        assert result[2] == flow_run.name  # name is at index 2
+        assert result[2] == flow_run.name
 
 def test_null_optional_fields(db):
-    # Create a flow run with null optional fields
     flow_run = FlowRun(
         id=uuid.uuid4(),
         name="test-flow-run",
         flow_id=uuid.uuid4(),
         created=datetime.utcnow(),
         updated=datetime.utcnow(),
-        deployment_id=None,  # Optional field as None
-        work_pool_name=None,  # Optional field as None
-        state_name=None      # Optional field as None
+        deployment_id=None,
+        work_pool_name=None,
+        state_name=None
     )
     
-    # Insert the flow run
-    db.upsert_flow_run(flow_run)
-    
-    # Verify the flow run was inserted with NULL values
+    db.runs.upsert(flow_run)
+
     result = db.db.execute("""
         SELECT deployment_id, work_pool_name, state_name 
         FROM flow_runs
     """).fetchone()
     
-    assert result[0] is None  # deployment_id
-    assert result[1] is None  # work_pool_name
-    assert result[2] == "Unknown"  # state_name should default to "Unknown"
+    assert result[0] is None
+    assert result[1] is None
+    assert result[2] == "Unknown"
+
+def test_logs_crud(db):
+    flow_run_id = uuid.uuid4()
+    log = Log(
+        name="test-log",
+        level=20,
+        message="Test message",
+        timestamp=datetime.utcnow(),
+        flow_run_id=flow_run_id
+    )
+
+    # Test single log insert
+    db.logs.upsert(log)
+
+    # Test reading logs
+    logs = db.logs.read_by_flow_run(flow_run_id)
+    assert len(logs) == 1
+    assert logs[0]['message'] == "Test message"
+
+    # Test multiple logs
+    more_logs = [
+        Log(
+            name="test-log",
+            level=20,
+            message=f"Test message {i}",
+            timestamp=datetime.utcnow(),
+            flow_run_id=flow_run_id
+        )
+        for i in range(3)
+    ]
+
+    db.logs.upsert_many(more_logs)
+    all_logs = db.logs.read_by_flow_run(flow_run_id)
+    assert len(all_logs) == 4
