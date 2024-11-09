@@ -1,5 +1,6 @@
 from uuid import UUID
 import duckdb
+import json
 
 from prefect import get_client
 from prefect.client.orchestration import PrefectClient
@@ -14,7 +15,6 @@ from prefect.client.schemas.responses import DeploymentResponse
 from prefect.client.schemas.sorting import FlowRunSort
 from prefect.client.schemas import FlowRun, StateType as FlowRunStates
 from prefect.exceptions import ObjectNotFound
-
 
 class CachedPrefectClient:
     def __init__(self):
@@ -52,7 +52,7 @@ class CachedPrefectClient:
         return "\n".join([log.message for log in logs])
 
     async def get_deployment_by_id(
-        self, deployment_id: UUID, ignore_cache: bool = False
+        self, deployment_id: UUID,
     ) -> DeploymentResponse | None:
         try:
             deployment = await self.client.read_deployment(deployment_id)
@@ -65,6 +65,7 @@ class CachedPrefectClient:
 class LocalDuckDB:
     def __init__(self, db_path: str = ":memory:"):
         self.db = duckdb.connect(database=db_path)
+        self.create_flow_runs_table()
 
     def upsert_data(self, table: str, data: dict):
         # Create table if not exists with dynamic columns based on data
@@ -84,3 +85,59 @@ class LocalDuckDB:
             """,
             values,
         )
+
+    def upsert_flow_runs(self, flow_runs: list[FlowRun]):
+        """
+        Upsert multiple Prefect flow runs into the database.
+        
+        Args:
+            flow_runs: A list of Prefect FlowRun objects from prefect.client.schemas.objects
+        """
+
+        for flow_run in flow_runs:
+            self.upsert_flow_run(flow_run)
+
+    def upsert_flow_run(self, flow_run: FlowRun):
+        """
+        Upsert a Prefect flow run into the database.
+        
+        Args:
+            flow_run: A Prefect FlowRun object from prefect.client.schemas.objects
+        """
+        # Convert FlowRun to dict for storage
+        flow_run_dict = json.loads(flow_run.model_dump_json())
+
+        
+        self.db.execute("""
+            INSERT OR REPLACE INTO flow_runs 
+            (raw_json, id, name, created, updated, deployment_id, flow_id, state_name, work_pool_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, [
+            json.dumps(flow_run_dict),  # raw_json
+            str(flow_run.id),  # Convert UUID to string
+            flow_run.name,
+            flow_run.created,
+            flow_run.updated,
+            str(flow_run.deployment_id) if flow_run.deployment_id else None,  # Handle optional UUID
+            str(flow_run.flow_id),  # Convert UUID to string
+            flow_run.state_name or 'Unknown',
+            flow_run.work_pool_name
+        ])
+        
+
+    def create_flow_runs_table(self):    
+        self.db.execute("""
+            CREATE TABLE IF NOT EXISTS flow_runs (
+                raw_json JSON,
+                id VARCHAR PRIMARY KEY,  
+                name VARCHAR,
+                created TIMESTAMP,
+                updated TIMESTAMP,
+                deployment_id VARCHAR,
+                flow_id VARCHAR,
+                state_name VARCHAR,
+                work_pool_name VARCHAR
+            )
+        """)
+
+    
