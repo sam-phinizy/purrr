@@ -17,8 +17,8 @@ def github_stars(repos: list[str] = ["prefecthq/prefect", "microsoft/playwright"
 
 if __name__ == "__main__":
     d = github_stars.from_source(
-        source="/Users/sphinizy/src/github.com/sam-phinizy/purrr",
-        entrypoint="./tests/fixtures/flows/github_stars.py:github_stars",
+        source="https://github.com/sam-phinizy/purrr.git",
+        entrypoint="tests/fixtures/flows/github_stars.py:github_stars",
     )
 
     d.deploy(
