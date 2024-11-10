@@ -1,8 +1,8 @@
 from textual.app import ComposeResult
 from textual.screen import Screen
-from textual.widgets import DataTable, Header, Footer, RadioSet, RadioButton, Button
+from textual.widgets import Header, Footer, RadioSet, RadioButton, Button
 
-from purrr.base import BaseTableScreen, BaseDetailView
+from purrr.base import BaseDetailView
 
 
 class WorkspaceScreen(Screen):

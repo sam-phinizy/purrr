@@ -1,10 +1,6 @@
-from typing import List
-
 import anyio
-import httpx
 import prefect
 from plumbum import local
-from prefect import flow, task
 from prefect import get_client
 from prefect.client.schemas.actions import WorkPoolCreate
 
@@ -23,6 +19,7 @@ async def main():
         )
     except prefect.exceptions.ObjectAlreadyExists:
         pass
+
 
 if __name__ == "__main__":
     anyio.run(main)

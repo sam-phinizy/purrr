@@ -1,1 +1,1 @@
-from .tui import entrypoint
+from .tui import entrypoint  # noqa: F401

@@ -6,7 +6,6 @@ from prefect import get_client
 from prefect.client.orchestration import PrefectClient
 from prefect.client.schemas import FlowRun
 from prefect.client.schemas.objects import Flow
-from sqlitedict import SqliteDict
 from textual.app import ComposeResult
 from textual.widgets import DataTable, Label, Footer
 

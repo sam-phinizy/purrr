@@ -6,7 +6,6 @@ from purrr.client import CachedPrefectClient
 from purrr.deployments import DeploymentsScreen
 from purrr.flows import FlowsScreen
 from purrr.runs import RunsScreen
-from purrr.settings import settings
 
 
 class Screens(str, enum.Enum):
