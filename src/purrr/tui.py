@@ -2,7 +2,7 @@ import enum
 
 from textual.app import App
 
-from purrr.client import CachedPrefectClient
+from purrr.client import CachingPrefectClient
 from purrr.deployments import DeploymentsScreen
 from purrr.flows import FlowsScreen
 from purrr.runs import RunsScreen
@@ -32,11 +32,11 @@ class PrefectApp(App):
     }
 
     CSS_PATH = "purrr.tcss"
-    _client: CachedPrefectClient
+    _client: CachingPrefectClient
 
     def __init__(self, client=None) -> None:
         super().__init__()
-        self._client = client or CachedPrefectClient()
+        self._client = client or CachingPrefectClient()
 
     def on_mount(self) -> None:
         self.push_screen(Screens.RUNS)

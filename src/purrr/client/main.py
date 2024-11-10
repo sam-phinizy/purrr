@@ -23,7 +23,7 @@ from purrr.client.logs import LogsClient
 from purrr.client.runs import RunsClient
 
 
-class CachedPrefectClient:
+class CachingPrefectClient:
     def __init__(self):
         self.client = get_client()
         self.db = DuckDBCache("test.db")

@@ -1,3 +1,3 @@
-from .main import CachedPrefectClient
+from .main import CachingPrefectClient
 
-__all__ = ["CachedPrefectClient"]
+__all__ = ["CachingPrefectClient"]
