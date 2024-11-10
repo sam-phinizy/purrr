@@ -10,7 +10,7 @@ CWD = pathlib.Path()
 @flow
 def run_ci_flow():
     results = []
-    for folder in ["client"]:
+    for folder in ["client", "app"]:
         results.append(run_pytest.submit(CWD, f"tests/{folder}"))
 
     results.append(run_pre_commit.submit())
