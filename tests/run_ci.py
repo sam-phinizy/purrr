@@ -1,6 +1,7 @@
 import pathlib
 
 from precis.pytest import run_pytest
+from precis.pre_commit import run_pre_commit
 from prefect import flow
 
 CWD = pathlib.Path()
@@ -11,6 +12,8 @@ def run_ci_flow():
     results = []
     for folder in ["client"]:
         results.append(run_pytest.submit(CWD, f"tests/{folder}"))
+
+    results.append(run_pre_commit.submit())
 
     return results
 
