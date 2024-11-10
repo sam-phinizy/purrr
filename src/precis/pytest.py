@@ -1,17 +1,17 @@
 import pathlib
 
-from prefect import task, Task
+from prefect import task
 from prefect_shell import ShellOperation
 
 
-@task
+@task(task_run_name="run-pytest-{directory}")
 def run_pytest(directory: pathlib.Path, pytest_args: str | None = None) -> None:
     """
     Run pytest in a given directory with specified arguments.
     """
 
     shell_operation = ShellOperation(
-        commands=[f"cd {directory}", f"pytest"],
+        commands=[f"cd {directory}", f"pytest {pytest_args}"],
         stream_output=True,
         working_dir=directory,
     )

@@ -1,0 +1,9 @@
+version: "3"
+
+tasks:
+  run-ci:
+    cmds:
+      - echo "Running CI"
+      - prefect profile use cloud
+      - python tests/run_ci.py
+      - prefect profile use local
