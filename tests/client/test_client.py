@@ -33,8 +33,8 @@ def generate_flow_runs():
 
 def test_create_flow_runs_table(db):
     result = db.db.execute("""
-        SELECT column_name, data_type 
-        FROM information_schema.columns 
+        SELECT column_name, data_type
+        FROM information_schema.columns
         WHERE table_name = 'flow_runs'
     """).fetchall()
 
@@ -112,7 +112,7 @@ def test_null_optional_fields(db):
     db.runs.upsert([flow_run])
 
     result = db.db.execute("""
-        SELECT deployment_id, work_pool_name, state_name 
+        SELECT deployment_id, work_pool_name, state_name
         FROM flow_runs
     """).fetchone()
 

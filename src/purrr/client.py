@@ -115,7 +115,7 @@ class RunsClient:
         self.db.execute("""
                 CREATE TABLE IF NOT EXISTS flow_runs (
                     raw_json JSON,
-                    id VARCHAR PRIMARY KEY,  
+                    id VARCHAR PRIMARY KEY,
                     name VARCHAR,
                     created TIMESTAMP,
                     updated TIMESTAMP,
@@ -131,7 +131,7 @@ class RunsClient:
             flow_run_dict = json.loads(flow_run.model_dump_json())
             self.db.execute(
                 """
-                INSERT OR REPLACE INTO flow_runs 
+                INSERT OR REPLACE INTO flow_runs
                 (raw_json, id, name, created, updated, deployment_id, flow_id, state_name, work_pool_name)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
@@ -179,7 +179,7 @@ class LogsClient:
         for log in logs:
             self.db.execute(
                 """
-                INSERT OR REPLACE INTO logs 
+                INSERT OR REPLACE INTO logs
                 (name, level, message, timestamp, flow_run_id, task_run_id)
                 VALUES (?, ?, ?, ?, ?, ?)
             """,

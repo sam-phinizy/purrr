@@ -30,4 +30,3 @@ jobs:
           PREFECT_API_URL: ${{ secrets.PREFECT_API_URL }}
           PREFECT_API_KEY: ${{ secrets.PREFECT_API_KEY }}
         run: uv run python tests/run_ci.py
-
