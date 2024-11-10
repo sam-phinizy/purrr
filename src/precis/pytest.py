@@ -4,7 +4,7 @@ from prefect import task
 from prefect_shell import ShellOperation
 
 
-@task(task_run_name="run-pytest-{directory}")
+@task(task_run_name="run-pytest-{pytest_args}")
 def run_pytest(directory: pathlib.Path, pytest_args: str | None = None) -> None:
     """
     Run pytest in a given directory with specified arguments.
