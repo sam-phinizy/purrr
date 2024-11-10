@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime
 import uuid
 from prefect.client.schemas.objects import FlowRun, Log, State, StateType
-from purrr.client import DuckDBCache
+from purrr.client.main import DuckDBCache
 
 
 @pytest.fixture
