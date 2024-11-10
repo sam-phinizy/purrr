@@ -26,5 +26,8 @@ jobs:
       - name: Install the project
         run: uv sync --all-extras --dev
       - name: Run CI
+        env:
+          PREFECT_API_URL: ${{ secrets.PREFECT_API_URL }}
+          PREFECT_API_KEY: ${{ secrets.PREFECT_API_KEY }}
         run: uv run python tests/run_ci.py
 
