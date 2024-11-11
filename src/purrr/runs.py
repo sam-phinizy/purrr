@@ -70,7 +70,7 @@ class RunDetail(BaseDetailView):
             label = self.query_one("#flowDeploymentVal")
             label.update("No Deployment")
 
-        logs = await self.app._client.get_run_logs(self.lookup_value)
+        logs = await self.app._client.get_logs(self.lookup_value)
         log_widget: Log = self.query_one("#flowLog")
         log_widget.write_line(logs)
 

@@ -8,6 +8,7 @@ from prefect.client.schemas.filters import (
     FlowRunFilterStateType,
     FlowRunFilter,
     LogFilterFlowRunId,
+    LogFilterTaskRunId,
     LogFilter,
 )
 from prefect.client.schemas.objects import (
@@ -38,8 +39,6 @@ class CachingPrefectClient:
         state_types: list[FlowRunStates] | None = None,
     ) -> list[FlowRun]:
         """Get all flow runs from Prefect.
-
-
 
         Args:
             sort (FlowRunSort, optional): Sort order. Defaults to FlowRunSort.START_TIME_DESC.
@@ -72,7 +71,7 @@ class CachingPrefectClient:
 
         return all_flow_runs
 
-    async def get_run_by_id(
+    async def get_run(
         self, run_id: UUID | str, force_refresh: bool = False
     ) -> FlowRun | None:
         try:
@@ -95,8 +94,27 @@ class CachingPrefectClient:
         self.cache.runs.upsert([flow_run])
         return flow_run
 
-    async def get_run_logs(self, run_id: UUID | str) -> str:
-        log_filter = LogFilter(flow_run_id=LogFilterFlowRunId(any_=[run_id]))
+    async def get_logs(
+        self, run_id: UUID | str | None = None, task_run_id: UUID | str | None = None
+    ) -> str:
+        if run_id and task_run_id:
+            raise ValueError("Cannot filter by both run_id and task_run_id")
+
+        if run_id:
+            flow_run_filter = LogFilterFlowRunId(any_=[run_id])
+        else:
+            flow_run_filter = None
+
+        if task_run_id:
+            task_run_filter = LogFilterTaskRunId(any_=[task_run_id])
+        else:
+            task_run_filter = None
+
+        log_filter = LogFilter(
+            flow_run_filter=flow_run_filter,
+            task_run_filter=task_run_filter,
+        )
+
         logs = await self.client.read_logs(log_filter=log_filter)
         return "\n".join([log.message for log in logs])
 
