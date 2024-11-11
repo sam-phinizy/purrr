@@ -74,6 +74,9 @@ class CachingPrefectClient:
     async def get_run(
         self, run_id: UUID | str, force_refresh: bool = False
     ) -> FlowRun | None:
+        if isinstance(run_id, str):
+            run_id = UUID(run_id)
+
         try:
             if force_refresh:
                 flow_run = await self._fetch_and_cache_flow_run(run_id)
@@ -89,7 +92,7 @@ class CachingPrefectClient:
         except ObjectNotFound:
             return None
 
-    async def _fetch_and_cache_flow_run(self, run_id: UUID | str) -> FlowRun:
+    async def _fetch_and_cache_flow_run(self, run_id: UUID) -> FlowRun:
         flow_run = await self.client.read_flow_run(run_id)
         self.cache.runs.upsert([flow_run])
         return flow_run
@@ -97,6 +100,11 @@ class CachingPrefectClient:
     async def get_logs(
         self, run_id: UUID | str | None = None, task_run_id: UUID | str | None = None
     ) -> str:
+        if isinstance(run_id, str):
+            run_id = UUID(run_id)
+        if isinstance(task_run_id, str):
+            task_run_id = UUID(task_run_id)
+
         if run_id and task_run_id:
             raise ValueError("Cannot filter by both run_id and task_run_id")
 

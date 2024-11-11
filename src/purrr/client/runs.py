@@ -2,7 +2,7 @@ import json
 from uuid import UUID
 
 import duckdb
-from prefect.client.schemas import FlowRun
+from prefect.client.schemas.objects import FlowRun
 
 
 class RunsCache:
