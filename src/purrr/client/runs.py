@@ -5,7 +5,7 @@ import duckdb
 from prefect.client.schemas import FlowRun
 
 
-class RunsClient:
+class RunsCache:
     def __init__(self, db: duckdb.DuckDBPyConnection):
         self.db = db
         self._create_table()

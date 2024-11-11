@@ -1,4 +1,4 @@
-from typing import AsyncGenerator
+from typing import Generator
 from uuid import UUID
 
 from prefect import get_client
@@ -18,7 +18,7 @@ async def get_deployment(
 
 async def get_deployments(
     prefect_client: PrefectClient,
-) -> AsyncGenerator[DeploymentResponse, None, None]:
+) -> Generator[DeploymentResponse, None, None]:
     deployments = await prefect_client.read_deployments()
     for deployment in deployments:
         yield deployment

@@ -19,14 +19,15 @@ from prefect.client.schemas.responses import DeploymentResponse
 from prefect.client.schemas.sorting import FlowRunSort
 from prefect.exceptions import ObjectNotFound
 
-from purrr.client.logs import LogsClient
-from purrr.client.runs import RunsClient
+from purrr.client.logs import LogsCache
+from purrr.client.runs import RunsCache
+from purrr.client.deployments import DeploymentCache
 
 
 class CachingPrefectClient:
     def __init__(self):
         self.client = get_client()
-        self.db = DuckDBCache("test.db")
+        self.cache = DuckDBCache("test.db")
 
     def reset(self):
         self.client = PrefectClient()
@@ -64,7 +65,7 @@ class CachingPrefectClient:
             if not flow_runs:
                 break
 
-            self.db.runs.upsert(flow_runs)
+            self.cache.runs.upsert(flow_runs)
 
             all_flow_runs.extend(flow_runs)
             offset += len(flow_runs)
@@ -79,7 +80,7 @@ class CachingPrefectClient:
                 flow_run = await self._fetch_and_cache_flow_run(run_id)
                 return flow_run
 
-            cached_run = self.db.runs.read(run_id)
+            cached_run = self.cache.runs.read(run_id)
             if cached_run and cached_run.state_name in TERMINAL_STATES:
                 return cached_run
 
@@ -91,7 +92,7 @@ class CachingPrefectClient:
 
     async def _fetch_and_cache_flow_run(self, run_id: UUID | str) -> FlowRun:
         flow_run = await self.client.read_flow_run(run_id)
-        self.db.runs.upsert([flow_run])
+        self.cache.runs.upsert([flow_run])
         return flow_run
 
     async def get_run_logs(self, run_id: UUID | str) -> str:
@@ -100,12 +101,20 @@ class CachingPrefectClient:
         return "\n".join([log.message for log in logs])
 
     async def get_deployment_by_id(
-        self, deployment_id: UUID
-    ) -> DeploymentResponse | None:
-        try:
-            deployment = await self.client.read_deployment(deployment_id)
-        except ObjectNotFound:
-            return None
+        self, deployment_id: UUID, force_refresh: bool = True
+    ) -> DeploymentResponse:
+        # First check the cache
+
+        if not force_refresh:
+            cached_deployment = self.cache.deployments.read(deployment_id)
+            if not cached_deployment:
+                return cached_deployment
+        else:
+            cached_deployment = None
+
+        # If not in cache, fetch from API and cache it
+        deployment = await self.client.read_deployment(deployment_id)
+        self.cache.deployments.upsert([deployment])
         return deployment
 
 
@@ -113,9 +122,11 @@ class DuckDBCache:
     def __init__(
         self,
         db_path: str = "duckdb.db",
-        logs_client_class: type[LogsClient] = LogsClient,
-        runs_client_class: type[RunsClient] = RunsClient,
+        logs_client_class: type[LogsCache] = LogsCache,
+        runs_client_class: type[RunsCache] = RunsCache,
+        deployments_client_class: type[DeploymentCache] = DeploymentCache,
     ):
         self.db = duckdb.connect(db_path)
         self.logs = logs_client_class(self.db)
         self.runs = runs_client_class(self.db)
+        self.deployments = deployments_client_class(self.db)

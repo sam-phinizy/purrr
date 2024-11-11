@@ -5,7 +5,7 @@ from prefect.client.schemas.objects import Log
 from uuid import UUID
 
 
-class LogsClient:
+class LogsCache:
     def __init__(self, db: duckdb.DuckDBPyConnection):
         self.db = db
         self._create_table()
