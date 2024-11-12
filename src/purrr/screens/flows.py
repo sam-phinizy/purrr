@@ -9,7 +9,7 @@ from prefect.client.schemas.objects import Flow
 from textual.app import ComposeResult
 from textual.widgets import DataTable, Label, Footer
 
-from purrr.base import BaseTableScreen, BaseDetailView
+from purrr.screens.base import BaseTableScreen, BaseDetailView
 
 
 async def get_flows(

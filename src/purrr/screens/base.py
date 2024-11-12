@@ -14,6 +14,7 @@ class BaseDetailView(Screen):
         ("R", "refresh_data()", "Refresh"),
         ("escape", "app.pop_screen()", "Back"),
     ]
+    app: "PrefectApp"
 
     def __init__(self, lookup_value, *args, **kwargs):
         super().__init__(*args, **kwargs)

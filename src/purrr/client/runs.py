@@ -1,8 +1,14 @@
 import json
 from uuid import UUID
-
+import logging
 import duckdb
 from prefect.client.schemas.objects import FlowRun
+from textual.logging import TextualHandler
+
+logging.basicConfig(
+    level="NOTSET",
+    handlers=[TextualHandler()],
+)
 
 
 class RunsCache:
@@ -54,3 +60,9 @@ class RunsCache:
         if result:
             return FlowRun(**json.loads(result[0][0]))
         return None
+
+    def filter(self, query: str):
+        query = f"SELECT * FROM flow_runs WHERE {query}"
+        logging.info("query", query)
+        result = self.db.execute(query).fetchall()
+        return [FlowRun(**json.loads(row[0])) for row in result]

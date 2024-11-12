@@ -3,14 +3,14 @@ from __future__ import annotations
 import enum
 
 from prefect import get_client
-from prefect.client.schemas import FlowRun
+from prefect.client.schemas.objects import FlowRun
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import DataTable, Label, Footer, Log, Header, Static
+from textual.widgets import DataTable, Label, Footer, Log, Header, Static, Input
 
-from purrr.base import BaseTableScreen, BaseDetailView
-from purrr.deployments import DeploymentDetail
+from purrr.screens.base import BaseTableScreen, BaseDetailView
+from purrr.screens.deployments import DeploymentDetail
 
 
 class RunsColumnKeys(str, enum.Enum):
@@ -38,7 +38,7 @@ class RunDetail(BaseDetailView):
                 Static(id="flowDeploymentVal"),
                 id="flowDetails",
             ),
-            Vertical(Log("", id="flowLog")),
+            Vertical(Log(highlight=False, id="flowLog")),
         )
 
         yield Footer()
@@ -46,32 +46,32 @@ class RunDetail(BaseDetailView):
     async def on_mount(self) -> None:
         label = self.query_one("#flowNameVal")
         row = await self.load_data()
-        label = self.query_one("#flowNameVal")
+        label = self.query_one("#flowNameVal", expect_type=Static)
         label.update(row.name)
-        label = self.query_one("#flowIdVal")
+        label = self.query_one("#flowIdVal", expect_type=Static)
         label.update(str(row.id))
-        label = self.query_one("#flowStateVal")
-        label.update(row.state.name)
+        label = self.query_one("#flowStateVal", expect_type=Static)
+        label.update(row.state_name or "Unknown")
 
         if row.deployment_id:
             try:
                 deployment = await self.app._client.get_deployment_by_id(
                     row.deployment_id
                 )
-                label = self.query_one("#flowDeploymentVal")
+                label = self.query_one("#flowDeploymentVal", expect_type=Static)
                 label.update(deployment.name)
             except ValueError as ve:
                 if "Invalid deployment ID" in str(ve):
-                    label = self.query_one("#flowDeploymentVal")
+                    label = self.query_one("#flowDeploymentVal", expect_type=Static)
                     label.update("No Deployment")
                 else:
                     raise ve
         else:
-            label = self.query_one("#flowDeploymentVal")
+            label = self.query_one("#flowDeploymentVal", expect_type=Static)
             label.update("No Deployment")
 
         logs = await self.app._client.get_logs(self.lookup_value)
-        log_widget: Log = self.query_one("#flowLog")
+        log_widget: Log = self.query_one("#flowLog", expect_type=Log)
         log_widget.write_line(logs)
 
     async def load_data(self) -> FlowRun:
@@ -81,6 +81,33 @@ class RunDetail(BaseDetailView):
 
 class RunsScreen(BaseTableScreen):
     detail_screen = RunDetail
+
+    def compose(self) -> ComposeResult:
+        yield Input(placeholder="Enter SQL filter...", id="filterInput")
+        yield from super().compose()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id == "filterInput" and event.input.value:
+            self.app.log("filterInput", event.value)
+            self.action_filter_data(event.value)
+
+    def action_filter_data(self, filter_query: str) -> None:
+        table = self.query_one(DataTable)
+        table.clear()
+        self.app.log("filter_query", filter_query)
+
+        data = self.app._client.cache.runs.filter(filter_query)
+        self.app.log(data)
+        for run in data:
+            table.add_row(
+                run.name,
+                "",
+                str(run.id),
+                run.state_name,
+                str(run.start_time) if run.start_time else "-",
+                str(run.end_time) if run.end_time else "-",
+                key=str(run.id),
+            )
 
     def add_columns(self, table: DataTable) -> None:
         table.add_column("Name", width=30, key=RunsColumnKeys.NAME)
@@ -96,6 +123,8 @@ class RunsScreen(BaseTableScreen):
 
     @on(DataTable.CellSelected)
     async def cell_selected(self, selected: DataTable.CellSelected) -> None:
+        if selected.cell_key.row_key is None:
+            return
         if selected.cell_key.column_key in (RunsColumnKeys.ID, RunsColumnKeys.NAME):
             screen_to_push = RunDetail
         elif (
@@ -115,21 +144,23 @@ class RunsScreen(BaseTableScreen):
 
         await self.app.push_screen(screen_to_push(lookup_value))
 
-    async def load_data(self, table: DataTable) -> None:
-        for run in await self.app._client.get_runs():
-            if run.deployment_id:
-                deployment = await self.app._client.get_deployment_by_id(
-                    run.deployment_id
-                )
-            else:
-                deployment = None
+    async def load_data(self, table: DataTable, filter_query: str = "") -> None:
+        runs = await self.app._client.get_runs()
+        if runs:
+            for run in runs:
+                if run.deployment_id:
+                    deployment = await self.app._client.get_deployment_by_id(
+                        run.deployment_id
+                    )
+                else:
+                    deployment = None
 
-            table.add_row(
-                run.name,
-                deployment.name if deployment else "-",
-                str(run.id),
-                run.state.type.value,
-                str(run.start_time) if run.start_time else "-",
-                str(run.end_time) if run.end_time else "-",
-                key=str(run.id),
-            )
+                table.add_row(
+                    run.name,
+                    deployment.name if deployment else "-",
+                    str(run.id),
+                    run.state.type.value,
+                    str(run.start_time) if run.start_time else "-",
+                    str(run.end_time) if run.end_time else "-",
+                    key=str(run.id),
+                )

@@ -2,7 +2,7 @@ from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.widgets import Header, Footer, RadioSet, RadioButton, Button
 
-from purrr.base import BaseDetailView
+from purrr.screens.base import BaseDetailView
 
 
 class WorkspaceScreen(Screen):

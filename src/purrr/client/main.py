@@ -2,7 +2,6 @@ from uuid import UUID
 
 import duckdb
 from prefect import get_client
-from prefect.client.orchestration import PrefectClient
 from prefect.client.schemas.filters import (
     FlowRunFilterState,
     FlowRunFilterStateType,
@@ -30,9 +29,6 @@ class CachingPrefectClient:
         self.client = get_client()
         self.cache = DuckDBCache("test.db")
 
-    def reset(self):
-        self.client = PrefectClient()
-
     async def get_runs(
         self,
         sort: FlowRunSort = FlowRunSort.START_TIME_DESC,
@@ -47,27 +43,28 @@ class CachingPrefectClient:
         Returns:
             list[FlowRun]: List of flow runs.
         """
+        args = {}
+        args["sort"] = sort
+        args["offset"] = 0
+
         if state_types:
-            flow_run_filter = FlowRunFilter(
+            args["flow_run_filter"] = FlowRunFilter(
                 state=FlowRunFilterState(type=FlowRunFilterStateType(any_=state_types))
             )
         else:
-            flow_run_filter = None
+            args["flow_run_filter"] = None
 
         all_flow_runs = []
-        offset = 0
 
         while True:
-            flow_runs: list[FlowRun] = await self.client.read_flow_runs(
-                sort=sort, offset=offset, flow_run_filter=flow_run_filter
-            )
+            flow_runs: list[FlowRun] = await self.client.read_flow_runs(**args)
             if not flow_runs:
                 break
 
             self.cache.runs.upsert(flow_runs)
 
             all_flow_runs.extend(flow_runs)
-            offset += len(flow_runs)
+            args["offset"] += len(flow_runs)
 
         return all_flow_runs
 
@@ -119,8 +116,8 @@ class CachingPrefectClient:
             task_run_filter = None
 
         log_filter = LogFilter(
-            flow_run_filter=flow_run_filter,
-            task_run_filter=task_run_filter,
+            flow_run_id=flow_run_filter,
+            task_run_id=task_run_filter,
         )
 
         logs = await self.client.read_logs(log_filter=log_filter)
@@ -129,11 +126,9 @@ class CachingPrefectClient:
     async def get_deployment_by_id(
         self, deployment_id: UUID, force_refresh: bool = True
     ) -> DeploymentResponse:
-        # First check the cache
-
         if not force_refresh:
             cached_deployment = self.cache.deployments.read(deployment_id)
-            if not cached_deployment:
+            if cached_deployment:
                 return cached_deployment
         else:
             cached_deployment = None
@@ -141,6 +136,7 @@ class CachingPrefectClient:
         # If not in cache, fetch from API and cache it
         deployment = await self.client.read_deployment(deployment_id)
         self.cache.deployments.upsert([deployment])
+
         return deployment
 
 
