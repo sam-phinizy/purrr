@@ -21,8 +21,7 @@ class BaseDetailView(Screen):
         self.lookup_value = lookup_value
 
     async def action_refresh_data(self):
-        table = self.query_one(DataTable)
-        await self.load_data(table)
+        await self.load_data()
 
     async def load_data(self) -> None:
         raise NotImplementedError

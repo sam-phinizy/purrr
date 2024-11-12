@@ -3,7 +3,7 @@ from datetime import datetime
 
 import duckdb
 import pytest
-from prefect.client.schemas import DeploymentResponse
+from prefect.client.schemas.objects import DeploymentResponse
 
 from purrr.client.deployments import DeploymentCache
 

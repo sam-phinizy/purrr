@@ -1,6 +1,5 @@
 import enum
 
-from textual import work
 from textual.app import App
 
 from purrr.client import CachingPrefectClient
@@ -53,10 +52,6 @@ class PrefectApp(App):
 
     def action_show_flow_runs(self) -> None:
         self.switch_screen(Screens.RUNS)
-
-    @work()
-    async def _get_runs(self, filter_query: str = "") -> None:
-        return await self._client.get_runs()
 
 
 def entrypoint():

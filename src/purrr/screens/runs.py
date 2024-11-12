@@ -129,9 +129,12 @@ class RunsScreen(BaseTableScreen):
         else:
             screen_to_push = RunDetail
 
-        if selected.cell_key.column_key != RunsColumnKeys.ID:
+        if (
+            selected.cell_key.column_key != RunsColumnKeys.ID
+            and selected.cell_key.row_key
+        ):
             lookup_value = await self.get_value(
-                selected.cell_key.row_key.value, RunsColumnKeys.ID
+                str(selected.cell_key.row_key.value), RunsColumnKeys.ID
             )
         else:
             lookup_value = selected.value

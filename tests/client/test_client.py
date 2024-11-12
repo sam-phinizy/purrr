@@ -1,8 +1,8 @@
 import pytest
-from datetime import datetime
 import uuid
 from prefect.client.schemas.objects import FlowRun, Log, State, StateType
 from purrr.client.main import DuckDBCache
+import pendulum
 
 
 @pytest.fixture
@@ -18,8 +18,8 @@ def generate_flow_runs():
                 id=uuid.uuid4(),
                 name=f"test-flow-run-{i}",
                 flow_id=uuid.uuid4(),
-                created=datetime.utcnow(),
-                updated=datetime.utcnow(),
+                created=pendulum.now(),  # type: ignore
+                updated=pendulum.now(),  # type: ignore
                 deployment_id=uuid.uuid4(),
                 work_pool_name="test-pool",
                 state=State(type=StateType.COMPLETED, name="Completed"),
@@ -102,8 +102,8 @@ def test_null_optional_fields(db):
         id=uuid.uuid4(),
         name="test-flow-run",
         flow_id=uuid.uuid4(),
-        created=datetime.utcnow(),
-        updated=datetime.utcnow(),
+        created=pendulum.now(),  # type: ignore
+        updated=pendulum.now(),  # type: ignore
         deployment_id=None,
         work_pool_name=None,
         state_name=None,
@@ -127,8 +127,7 @@ def test_upsert_log(db):
         name="test-log",
         level=20,
         message="Test message",
-        timestamp=datetime.utcnow(),
-        flow_run_id=flow_run_id,
+        timestamp=pendulum.DateTime.now(),  # type: ignore        flow_run_id=flow_run_id,
     )
 
     db.logs.upsert([log])
@@ -145,7 +144,7 @@ def test_upsert_multiple_logs(db):
             name="test-log",
             level=20,
             message=f"Test message {i}",
-            timestamp=datetime.utcnow(),
+            timestamp=pendulum.DateTime.now(),  # type: ignore
             flow_run_id=flow_run_id,
         )
         for i in range(3)
