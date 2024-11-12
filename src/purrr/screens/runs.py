@@ -15,13 +15,14 @@ from purrr.screens.deployments import DeploymentDetail
 
 
 class RunsColumnKeys(str, enum.Enum):
-    ID = "ID"
-    NAME = "NAME"
-    STATE = "STATE"
-    START_TIME = "START_TIME"
-    END_TIME = "END_TIME"
-    DURATION = "DURATION"
-    DEPLOYMENT = "DEPLOYMENT"
+    ID = "id"
+    NAME = "name"
+    STATE = "state_name"
+    CREATED = "created"
+    UPDATED = "updated"
+    DEPLOYMENT_ID = "deployment_id"
+    FLOW_ID = "flow_id"
+    WORK_POOL = "work_pool_name"
 
 
 class RunDetail(BaseDetailView):
@@ -84,7 +85,6 @@ class RunsScreen(BaseTableScreen):
     detail_screen = RunDetail
 
     def compose(self) -> ComposeResult:
-        yield Input(placeholder="Enter SQL filter...", id="filterInput")
         yield from super().compose()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
@@ -104,12 +104,17 @@ class RunsScreen(BaseTableScreen):
             self._add_run_to_table(table, run, deployment)
 
     def add_columns(self, table: DataTable) -> None:
-        table.add_column("Name", width=30, key=RunsColumnKeys.NAME)
-        table.add_column("Deployment", width=30, key=RunsColumnKeys.DEPLOYMENT)
-        table.add_column("Run ID", width=36, key=RunsColumnKeys.ID)
-        table.add_column("State", width=20, key=RunsColumnKeys.STATE)
-        table.add_column("Start Time", width=20, key=RunsColumnKeys.START_TIME)
-        table.add_column("End Time", width=20, key=RunsColumnKeys.END_TIME)
+        table.add_column(RunsColumnKeys.NAME, width=30, key=RunsColumnKeys.NAME)
+        table.add_column(
+            RunsColumnKeys.DEPLOYMENT_ID, width=36, key=RunsColumnKeys.DEPLOYMENT_ID
+        )
+        table.add_column(RunsColumnKeys.FLOW_ID, width=36, key=RunsColumnKeys.FLOW_ID)
+        table.add_column(RunsColumnKeys.STATE, width=20, key=RunsColumnKeys.STATE)
+        table.add_column(RunsColumnKeys.CREATED, width=20, key=RunsColumnKeys.CREATED)
+        table.add_column(RunsColumnKeys.UPDATED, width=20, key=RunsColumnKeys.UPDATED)
+        table.add_column(
+            RunsColumnKeys.WORK_POOL, width=20, key=RunsColumnKeys.WORK_POOL
+        )
 
     async def get_value(self, row_key: str, column_key: str) -> str:
         table = self.query_one(DataTable)
@@ -123,7 +128,7 @@ class RunsScreen(BaseTableScreen):
             screen_to_push = RunDetail
         elif (
             selected.value != "-"
-            and selected.cell_key.column_key == RunsColumnKeys.DEPLOYMENT
+            and selected.cell_key.column_key == RunsColumnKeys.DEPLOYMENT_ID
         ):
             screen_to_push = DeploymentDetail
         else:
@@ -161,10 +166,11 @@ class RunsScreen(BaseTableScreen):
         """Helper method to add a run to the data table with consistent formatting."""
         table.add_row(
             run.name,
-            deployment.name if deployment else "-",
-            str(run.id),
+            str(run.deployment_id) if run.deployment_id else "-",
+            str(run.flow_id),
             run.state_name if hasattr(run, "state_name") else run.state.type.value,
-            str(run.start_time) if run.start_time else "-",
-            str(run.end_time) if run.end_time else "-",
+            str(run.created) if run.created else "-",
+            str(run.updated) if run.updated else "-",
+            run.work_pool_name or "-",
             key=str(run.id),
         )

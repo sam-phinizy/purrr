@@ -1,9 +1,10 @@
 from typing import Type, TYPE_CHECKING
 
+from textual import on
 from textual.app import ComposeResult
 from textual.screen import Screen
-from textual.widgets import Header, DataTable, Footer
-
+from textual.widgets import Header, DataTable, Footer, Input
+from textual.message import Message
 
 if TYPE_CHECKING:
     from purrr.tui import PrefectApp
@@ -27,6 +28,18 @@ class BaseDetailView(Screen):
         raise NotImplementedError
 
 
+class CustomInput(Input):
+    BINDINGS = [
+        ("escape", "loose_focus()", "Reset Focus"),
+    ]
+
+    class ResetFocus(Message):
+        pass
+
+    def action_loose_focus(self):
+        self.post_message(self.ResetFocus())
+
+
 class BaseTableScreen(Screen):
     detail_screen: Type[BaseDetailView]
     app: "PrefectApp"
@@ -35,6 +48,7 @@ class BaseTableScreen(Screen):
         ("R", "refresh_data()", "Refresh"),
         ("D", "open_detail()", "Open Detail"),
         ("S", "sort_by_column()", "Sort By"),
+        ("F", "filter_table()", "Filter Table"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -44,6 +58,9 @@ class BaseTableScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header()
+        yield CustomInput(
+            placeholder="Enter clause like `state_name ='Scheduled'`", id="filterInput"
+        )
         yield DataTable()
         yield Footer()
 
@@ -51,6 +68,7 @@ class BaseTableScreen(Screen):
         table = self.query_one(DataTable)
         self.add_columns(table)
         await self.load_data(table)
+        table.focus()
 
     def add_columns(self, table: DataTable) -> None:
         raise NotImplementedError
@@ -62,6 +80,9 @@ class BaseTableScreen(Screen):
         table = self.query_one(DataTable)
         table.clear()
         await self.load_data(table)
+
+    async def action_filter_table(self):
+        self.query_one(Input).focus()
 
     async def action_sort_by_column(self):
         my_table = self.query_one(DataTable)
@@ -76,3 +97,7 @@ class BaseTableScreen(Screen):
 
     async def get_value(self, row_key: str, column_key: str) -> str:
         raise NotImplementedError
+
+    @on(CustomInput.ResetFocus)
+    def reset_focus(self):
+        self.query_one(DataTable).focus()

@@ -64,5 +64,8 @@ class RunsCache:
     def filter(self, query: str):
         query = f"SELECT * FROM flow_runs WHERE {query}"
         logging.info("query", query)
-        result = self.db.execute(query).fetchall()
+        try:
+            result = self.db.execute(query).fetchall()
+        except duckdb.ParserException as e:
+            logging.error(e)
         return [FlowRun(**json.loads(row[0])) for row in result]
