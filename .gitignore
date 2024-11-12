@@ -22,3 +22,5 @@ wheels/
 
 # Mac
 .DS_Store
+.aider*
+.env

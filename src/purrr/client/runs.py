@@ -66,6 +66,7 @@ class RunsCache:
         logging.info("query", query)
         try:
             result = self.db.execute(query).fetchall()
+            return [FlowRun(**json.loads(row[0])) for row in result]
         except duckdb.ParserException as e:
             logging.error(e)
-        return [FlowRun(**json.loads(row[0])) for row in result]
+            return []

@@ -1,11 +1,11 @@
 import uuid
-from datetime import datetime
 
 import duckdb
 import pytest
-from prefect.client.schemas.objects import DeploymentResponse
+from prefect.client.schemas.objects import DateTime
 
 from purrr.client.deployments import DeploymentCache
+from prefect.client.schemas.responses import DeploymentResponse
 
 
 @pytest.fixture
@@ -22,18 +22,20 @@ def deployment_cache(db):
 def sample_deployment():
     return DeploymentResponse(
         id=uuid.uuid4(),
-        created=datetime.now(),
-        updated=datetime.now(),
+        created=DateTime.now(),
+        updated=DateTime.now(),
         name="test-deployment",
         version="1.0",
         flow_id=uuid.uuid4(),
         paused=False,
         work_pool_name="test-pool",
         work_queue_name="test-queue",
+        work_queue_id=uuid.uuid4(),
     )
 
 
 def test_init_creates_table(db):
+    DeploymentCache(db)
     result = db.execute("SELECT * FROM deployments").description
     expected_columns = {
         "id",
@@ -59,14 +61,15 @@ def test_upsert_multiple_deployments(deployment_cache):
     deployments = [
         DeploymentResponse(
             id=uuid.uuid4(),
-            created=datetime.now(),
-            updated=datetime.now(),
+            created=DateTime.now(),
+            updated=DateTime.now(),
             name=f"test-deployment-{i}",
             version="1.0",
             flow_id=uuid.uuid4(),
             paused=False,
             work_pool_name="test-pool",
             work_queue_name="test-queue",
+            work_queue_id=uuid.uuid4(),
         )
         for i in range(3)
     ]
@@ -89,13 +92,14 @@ def test_upsert_updates_existing_deployment(deployment_cache, sample_deployment)
     updated_deployment = DeploymentResponse(
         id=sample_deployment.id,
         created=sample_deployment.created,
-        updated=datetime.now(),
+        updated=DateTime.now(),
         name="updated-name",
         version="2.0",
         flow_id=sample_deployment.flow_id,
         paused=True,
         work_pool_name="new-pool",
         work_queue_name="new-queue",
+        work_queue_id=uuid.uuid4(),
     )
 
     deployment_cache.upsert([updated_deployment])

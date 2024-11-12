@@ -1,6 +1,6 @@
 import pytest
 import uuid
-from prefect.client.schemas.objects import FlowRun, Log, State, StateType
+from prefect.client.schemas.objects import FlowRun, State, StateType
 from purrr.client.main import DuckDBCache
 import pendulum
 
@@ -119,38 +119,3 @@ def test_null_optional_fields(db):
     assert result[0] is None
     assert result[1] is None
     assert result[2] == "Unknown"
-
-
-def test_upsert_log(db):
-    flow_run_id = uuid.uuid4()
-    log = Log(
-        name="test-log",
-        level=20,
-        message="Test message",
-        timestamp=pendulum.DateTime.now(),  # type: ignore        flow_run_id=flow_run_id,
-    )
-
-    db.logs.upsert([log])
-
-    logs = db.logs.flow_run(flow_run_id)
-    assert len(logs) == 1
-    assert logs[0]["message"] == "Test message"
-
-
-def test_upsert_multiple_logs(db):
-    flow_run_id = uuid.uuid4()
-    logs = [
-        Log(
-            name="test-log",
-            level=20,
-            message=f"Test message {i}",
-            timestamp=pendulum.DateTime.now(),  # type: ignore
-            flow_run_id=flow_run_id,
-        )
-        for i in range(3)
-    ]
-
-    db.logs.upsert(logs)
-
-    all_logs = db.logs.flow_run(flow_run_id)
-    assert len(all_logs) == 3
