@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+from typing import Any
 
 from prefect import get_client
 from prefect.client.schemas.objects import FlowRun
@@ -99,15 +100,8 @@ class RunsScreen(BaseTableScreen):
         data = self.app._client.cache.runs.filter(filter_query)
         self.app.log(data)
         for run in data:
-            table.add_row(
-                run.name,
-                "",
-                str(run.id),
-                run.state_name,
-                str(run.start_time) if run.start_time else "-",
-                str(run.end_time) if run.end_time else "-",
-                key=str(run.id),
-            )
+            deployment = self._get_deployment_for_run(run)
+            self._add_run_to_table(table, run, deployment)
 
     def add_columns(self, table: DataTable) -> None:
         table.add_column("Name", width=30, key=RunsColumnKeys.NAME)
@@ -144,23 +138,30 @@ class RunsScreen(BaseTableScreen):
 
         await self.app.push_screen(screen_to_push(lookup_value))
 
-    async def load_data(self, table: DataTable, filter_query: str = "") -> None:
+    async def _get_deployment_for_run(self, run) -> Any | None:
+        """Helper method to fetch deployment information for a run."""
+        if run.deployment_id:
+            try:
+                return await self.app._client.get_deployment_by_id(run.deployment_id)
+            except ValueError:
+                return None
+        return None
+
+    async def load_data(self, table: DataTable) -> None:
         runs = await self.app._client.get_runs()
         if runs:
             for run in runs:
-                if run.deployment_id:
-                    deployment = await self.app._client.get_deployment_by_id(
-                        run.deployment_id
-                    )
-                else:
-                    deployment = None
+                deployment = await self._get_deployment_for_run(run)
+                self._add_run_to_table(table, run, deployment)
 
-                table.add_row(
-                    run.name,
-                    deployment.name if deployment else "-",
-                    str(run.id),
-                    run.state.type.value,
-                    str(run.start_time) if run.start_time else "-",
-                    str(run.end_time) if run.end_time else "-",
-                    key=str(run.id),
-                )
+    def _add_run_to_table(self, table: DataTable, run, deployment=None) -> None:
+        """Helper method to add a run to the data table with consistent formatting."""
+        table.add_row(
+            run.name,
+            deployment.name if deployment else "-",
+            str(run.id),
+            run.state_name if hasattr(run, "state_name") else run.state.type.value,
+            str(run.start_time) if run.start_time else "-",
+            str(run.end_time) if run.end_time else "-",
+            key=str(run.id),
+        )
