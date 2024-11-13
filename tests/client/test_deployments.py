@@ -2,10 +2,10 @@ import uuid
 
 import duckdb
 import pytest
-from prefect.client.schemas.objects import DateTime
 
 from purrr.client.deployments import DeploymentCache
 from prefect.client.schemas.responses import DeploymentResponse
+from pendulum import DateTime
 
 
 @pytest.fixture
@@ -22,8 +22,8 @@ def deployment_cache(db):
 def sample_deployment():
     return DeploymentResponse(
         id=uuid.uuid4(),
-        created=DateTime.now(),
-        updated=DateTime.now(),
+        created=DateTime.now(),  # type: ignore
+        updated=DateTime.now(),  # type: ignore
         name="test-deployment",
         version="1.0",
         flow_id=uuid.uuid4(),
@@ -61,8 +61,8 @@ def test_upsert_multiple_deployments(deployment_cache):
     deployments = [
         DeploymentResponse(
             id=uuid.uuid4(),
-            created=DateTime.now(),
-            updated=DateTime.now(),
+            created=DateTime.now(),  # type: ignore
+            updated=DateTime.now(),  # type: ignore
             name=f"test-deployment-{i}",
             version="1.0",
             flow_id=uuid.uuid4(),
@@ -92,7 +92,7 @@ def test_upsert_updates_existing_deployment(deployment_cache, sample_deployment)
     updated_deployment = DeploymentResponse(
         id=sample_deployment.id,
         created=sample_deployment.created,
-        updated=DateTime.now(),
+        updated=DateTime.now(),  # type: ignore
         name="updated-name",
         version="2.0",
         flow_id=sample_deployment.flow_id,

@@ -28,7 +28,7 @@ def test_upsert_new_log(logs_cache):
         name="test_flow",
         level=20,  # INFO level
         message="Test message",
-        timestamp=timestamp,
+        timestamp=timestamp,  # type: ignore
         flow_run_id=flow_run_id,
     )
 
@@ -54,7 +54,7 @@ def test_upsert_duplicate_log(logs_cache):
         name="test_flow",
         level=20,
         message="Initial message",
-        timestamp=timestamp,
+        timestamp=timestamp,  # type: ignore
         flow_run_id=flow_run_id,
     )
     logs_cache.upsert([initial_log])
@@ -64,7 +64,7 @@ def test_upsert_duplicate_log(logs_cache):
         name="test_flow",
         level=30,  # WARNING level
         message="Updated message",
-        timestamp=timestamp,
+        timestamp=timestamp,  # type: ignore
         flow_run_id=flow_run_id,
     )
     logs_cache.upsert([updated_log])
@@ -97,7 +97,7 @@ def test_upsert_multiple_logs(logs_cache):
             name="test_flow",
             level=20,
             message=f"Message {i}",
-            timestamp=base_timestamp.add(seconds=i),
+            timestamp=base_timestamp.add(seconds=i),  # type: ignore
             flow_run_id=flow_run_id,
         )
         for i in range(3)
@@ -119,7 +119,7 @@ def test_upsert_log_without_run_ids(logs_cache):
         name="test_flow",
         level=20,
         message="Test message",
-        timestamp=timestamp,
+        timestamp=timestamp,  # type: ignore
     )
 
     logs_cache.upsert([log])

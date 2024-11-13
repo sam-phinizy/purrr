@@ -21,8 +21,8 @@ def sample_flow_run():
     return FlowRun(
         id=UUID("12345678-1234-5678-1234-567812345678"),
         name="test_flow",
-        created=datetime.now(),
-        updated=datetime.now(),
+        created=datetime.now(),  # type: ignore
+        updated=datetime.now(),  # type: ignore
         deployment_id=UUID("87654321-4321-8765-4321-876543210987"),
         flow_id=UUID("11111111-2222-3333-4444-555555555555"),
         state_name="Running",
@@ -86,8 +86,8 @@ def test_upsert_multiple_runs(runs_cache, sample_flow_run):
     second_flow_run = FlowRun(
         id=UUID("98765432-9876-5432-9876-987654321098"),
         name="test_flow_2",
-        created=datetime.now(),
-        updated=datetime.now(),
+        created=datetime.now(),  # type: ignore
+        updated=datetime.now(),  # type: ignore
         deployment_id=None,
         flow_id=UUID("11111111-2222-3333-4444-555555555555"),
         state_name="Completed",
