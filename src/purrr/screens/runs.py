@@ -87,12 +87,14 @@ class RunsScreen(BaseTableScreen):
     def compose(self) -> ComposeResult:
         yield from super().compose()
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
         if event.input.id == "filterInput" and event.input.value:
             self.app.log("filterInput", event.value)
-            self.action_filter_data(event.value)
+            await self.action_filter_data(event.value)
+        elif event.input.id == "filterInput" and not event.input.value:
+            await self.action_refresh_data()
 
-    def action_filter_data(self, filter_query: str) -> None:
+    async def action_filter_data(self, filter_query: str) -> None:
         table = self.query_one(DataTable)
         table.clear()
         self.app.log("filter_query", filter_query)

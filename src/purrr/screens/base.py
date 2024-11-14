@@ -59,7 +59,9 @@ class BaseTableScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header()
         yield CustomInput(
-            placeholder="Enter clause like `state_name ='Scheduled'`", id="filterInput"
+            placeholder="Enter clause like `state_name ='Scheduled'`",
+            id="filterInput",
+            classes="hidden",
         )
         yield DataTable()
         yield Footer()
@@ -82,7 +84,10 @@ class BaseTableScreen(Screen):
         await self.load_data(table)
 
     async def action_filter_table(self):
-        self.query_one(Input).focus()
+        filter_input = self.query_one("#filterInput")
+        filter_input.toggle_class("hidden")
+        if not filter_input.has_class("hidden"):
+            filter_input.focus()
 
     async def action_sort_by_column(self):
         my_table = self.query_one(DataTable)

@@ -25,9 +25,9 @@ from purrr.client.deployments import DeploymentCache
 
 
 class CachingPrefectClient:
-    def __init__(self):
+    def __init__(self, db_name: str = "test.db"):
         self.client = get_client()
-        self.cache = DuckDBCache("test.db")
+        self.cache = DuckDBCache(db_name)
 
     async def get_runs(
         self,

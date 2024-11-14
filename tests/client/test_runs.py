@@ -1,14 +1,7 @@
 import pytest
-import duckdb
 from datetime import datetime
 from uuid import UUID
 from purrr.client.runs import RunsCache, FlowRun
-
-
-@pytest.fixture
-def db():
-    conn = duckdb.connect(":memory:")
-    return conn
 
 
 @pytest.fixture

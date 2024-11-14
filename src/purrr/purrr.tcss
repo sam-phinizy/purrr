@@ -9,3 +9,7 @@
 .formLabel {
     text-style: bold;
 }
+
+.hidden {
+    display: none;
+}

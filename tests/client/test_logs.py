@@ -1,16 +1,9 @@
 import pytest
 from prefect.client.schemas.objects import Log
 from uuid import UUID
-import duckdb
 from pendulum import DateTime
 
 from purrr.client.logs import LogsCache
-
-
-@pytest.fixture
-def db():
-    """Create an in-memory DuckDB database for testing"""
-    return duckdb.connect(database=":memory:")
 
 
 @pytest.fixture

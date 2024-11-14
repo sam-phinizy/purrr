@@ -1,16 +1,10 @@
 import uuid
 
-import duckdb
 import pytest
 
 from purrr.client.deployments import DeploymentCache
 from prefect.client.schemas.responses import DeploymentResponse
 from pendulum import DateTime
-
-
-@pytest.fixture
-def db():
-    return duckdb.connect(":memory:")
 
 
 @pytest.fixture
@@ -92,7 +86,7 @@ def test_upsert_updates_existing_deployment(deployment_cache, sample_deployment)
     updated_deployment = DeploymentResponse(
         id=sample_deployment.id,
         created=sample_deployment.created,
-        updated=DateTime.now(),  # type: ignore
+        updated=DateTime.now(),
         name="updated-name",
         version="2.0",
         flow_id=sample_deployment.flow_id,

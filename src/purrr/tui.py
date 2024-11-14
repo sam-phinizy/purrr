@@ -6,12 +6,25 @@ from purrr.client import CachingPrefectClient
 from purrr.screens.deployments import DeploymentsScreen
 from purrr.screens.flows import FlowsScreen
 from purrr.screens.runs import RunsScreen
+from textual.command import Hit, Provider
 
 
 class Screens(str, enum.Enum):
     DEPLOYMENTS = "deployments"
     FLOWS = "flows"
     RUNS = "runs"
+
+
+class PrefectAppCommands(Provider):
+    def show_runs_screen(self) -> None:
+        """Show the runs screen"""
+        self.app.switch_screen(Screens.RUNS)
+
+    def discover_commands(self):
+        yield Hit(1, "Show Runs", self.show_runs_screen)
+
+    def search(self, query: str):
+        yield Hit(1, "Show Runs", self.show_runs_screen)
 
 
 class PrefectApp(App):
@@ -30,6 +43,8 @@ class PrefectApp(App):
         Screens.FLOWS: FlowsScreen,
         Screens.RUNS: RunsScreen,
     }
+
+    COMMANDS = App.COMMANDS | {PrefectAppCommands}
 
     CSS_PATH = "purrr.tcss"
     _client: CachingPrefectClient
