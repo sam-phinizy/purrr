@@ -1,4 +1,5 @@
 from uuid import UUID
+from datetime import datetime
 
 import duckdb
 from prefect import get_client
@@ -43,30 +44,37 @@ class CachingPrefectClient:
         Returns:
             list[FlowRun]: List of flow runs.
         """
-        args = {}
-        args["sort"] = sort
-        args["offset"] = 0
+        try:
+            args = {}
+            args["sort"] = sort
+            args["offset"] = 0
 
-        if state_types:
-            args["flow_run_filter"] = FlowRunFilter(
-                state=FlowRunFilterState(type=FlowRunFilterStateType(any_=state_types))
-            )
-        else:
-            args["flow_run_filter"] = None
+            if state_types:
+                args["flow_run_filter"] = FlowRunFilter(
+                    state=FlowRunFilterState(
+                        type=FlowRunFilterStateType(any_=state_types)
+                    )
+                )
+            else:
+                args["flow_run_filter"] = None
 
-        all_flow_runs = []
+            all_flow_runs = []
 
-        while True:
-            flow_runs: list[FlowRun] = await self.client.read_flow_runs(**args)
-            if not flow_runs:
-                break
+            while True:
+                flow_runs: list[FlowRun] = await self.client.read_flow_runs(**args)
+                if not flow_runs:
+                    break
 
-            self.cache.runs.upsert(flow_runs)
+                self.cache.runs.upsert(flow_runs)
 
-            all_flow_runs.extend(flow_runs)
-            args["offset"] += len(flow_runs)
+                all_flow_runs.extend(flow_runs)
+                args["offset"] += len(flow_runs)
 
-        return all_flow_runs
+            self.cache.log_execution("get_runs", True)
+            return all_flow_runs
+        except Exception as e:
+            self.cache.log_execution("get_runs", False)
+            raise e
 
     async def get_run(
         self, run_id: UUID | str, force_refresh: bool = False
@@ -152,3 +160,23 @@ class DuckDBCache:
         self.logs = logs_client_class(self.db)
         self.runs = runs_client_class(self.db)
         self.deployments = deployments_client_class(self.db)
+
+        # Initialize metadata table with function_name as primary key
+        self.db.execute("""
+            CREATE TABLE IF NOT EXISTS purrr_metadata (
+                function_name VARCHAR PRIMARY KEY,
+                time_executed TIMESTAMP,
+                success BOOLEAN
+            )
+        """)
+
+    def log_execution(self, function_name: str, success: bool) -> None:
+        """Log function execution with timestamp and success status.
+        Will update existing record if function has been called before."""
+        self.db.execute(
+            """
+            INSERT OR REPLACE INTO purrr_metadata (function_name, time_executed, success)
+            VALUES (?, ?, ?)
+        """,
+            [function_name, datetime.now(), success],
+        )
