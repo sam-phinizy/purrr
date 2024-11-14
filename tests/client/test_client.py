@@ -1,13 +1,13 @@
 import pytest
 import uuid
 from prefect.client.schemas.objects import FlowRun, State, StateType
-from purrr.client.main import DuckDBCache
+from purrr.client.main import SQLiteCache
 import pendulum
 
 
 @pytest.fixture
 def db():
-    return DuckDBCache(":memory:")
+    return SQLiteCache(":memory:")
 
 
 @pytest.fixture
@@ -32,26 +32,31 @@ def generate_flow_runs():
 
 
 def test_create_flow_runs_table(db):
-    result = db.db.execute("""
-        SELECT column_name, data_type
-        FROM information_schema.columns
-        WHERE table_name = 'flow_runs'
-    """).fetchall()
+    result = db.db.execute("PRAGMA table_info(flow_runs)").fetchall()
+
+    # PRAGMA returns: (id, name, type, notnull, dflt_value, pk)
+    column_info = {row[1]: row[2] for row in result}
 
     expected_columns = {
         "raw_json": "JSON",
-        "id": "VARCHAR",
-        "name": "VARCHAR",
+        "id": "TEXT",
+        "name": "TEXT",
         "created": "TIMESTAMP",
         "updated": "TIMESTAMP",
-        "deployment_id": "VARCHAR",
-        "flow_id": "VARCHAR",
-        "state_name": "VARCHAR",
-        "work_pool_name": "VARCHAR",
+        "deployment_id": "TEXT",
+        "flow_id": "TEXT",
+        "state_name": "TEXT",
+        "work_pool_name": "TEXT",
     }
 
-    actual_columns = {row[0]: row[1] for row in result}
-    assert actual_columns == expected_columns
+    assert column_info == expected_columns
+
+
+def test_create_flow_runs_primary_key(db):
+    result = db.db.execute("PRAGMA table_info(flow_runs)").fetchall()
+    # Find the primary key column
+    pk_column = next(row[1] for row in result if row[5] == 1)  # row[5] is the pk flag
+    assert pk_column == "id"
 
 
 def test_upsert_flow_run(db, generate_flow_runs):

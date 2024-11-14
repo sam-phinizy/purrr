@@ -1,7 +1,7 @@
 from uuid import UUID
 from datetime import datetime
+import sqlite3
 
-import duckdb
 from prefect import get_client
 from prefect.client.schemas.filters import (
     FlowRunFilterState,
@@ -28,7 +28,7 @@ from purrr.client.deployments import DeploymentCache
 class CachingPrefectClient:
     def __init__(self, db_name: str = "test.db"):
         self.client = get_client()
-        self.cache = DuckDBCache(db_name)
+        self.cache = SQLiteCache(db_name)
 
     async def get_runs(
         self,
@@ -148,15 +148,16 @@ class CachingPrefectClient:
         return deployment
 
 
-class DuckDBCache:
+class SQLiteCache:
     def __init__(
         self,
-        db_path: str = "duckdb.db",
+        db_path: str = "sqlite.db",
         logs_client_class: type[LogsCache] = LogsCache,
         runs_client_class: type[RunsCache] = RunsCache,
         deployments_client_class: type[DeploymentCache] = DeploymentCache,
     ):
-        self.db = duckdb.connect(db_path)
+        self.db_path = db_path
+        self.db = self._get_connection()
         self.logs = logs_client_class(self.db)
         self.runs = runs_client_class(self.db)
         self.deployments = deployments_client_class(self.db)
@@ -164,11 +165,22 @@ class DuckDBCache:
         # Initialize metadata table with function_name as primary key
         self.db.execute("""
             CREATE TABLE IF NOT EXISTS purrr_metadata (
-                function_name VARCHAR PRIMARY KEY,
+                function_name TEXT PRIMARY KEY,
                 time_executed TIMESTAMP,
                 success BOOLEAN
             )
         """)
+        self.db.commit()
+
+    def _get_connection(self) -> sqlite3.Connection:
+        """Create a new SQLite connection with proper settings."""
+        conn = sqlite3.connect(
+            self.db_path,
+            detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
+        )
+        # Make sqlite3 return Row objects that support both index and key-based access
+        conn.row_factory = sqlite3.Row
+        return conn
 
     def log_execution(self, function_name: str, success: bool) -> None:
         """Log function execution with timestamp and success status.
@@ -180,3 +192,4 @@ class DuckDBCache:
         """,
             [function_name, datetime.now(), success],
         )
+        self.db.commit()
